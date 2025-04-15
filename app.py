@@ -4,8 +4,8 @@ from datetime import datetime
 import pandas as pd
 import subprocess
 
-# Caminho base para buscar os .sql
-base_dir = "grupo_santa"
+# Caminho base atualizado
+base_dir = "variaveis_command_center/grupo_santa"
 log_file = "log_edicoes.csv"
 
 st.title("📝 Editor de Scripts SQL - Grupo Santa")
@@ -23,7 +23,7 @@ def listar_arquivos_sql(pasta_base):
 arquivos_sql = listar_arquivos_sql(base_dir)
 
 if not arquivos_sql:
-    st.warning("Nenhum arquivo SQL encontrado em 'grupo_santa'.")
+    st.warning("Nenhum arquivo SQL encontrado.")
     st.stop()
 
 # Dropdown para selecionar arquivo
@@ -66,7 +66,7 @@ if st.button("💾 Salvar e registrar alteração"):
         df.to_csv(log_file, index=False)
         st.success("Alteração salva com sucesso e registrada no log!")
 
-        # Git commit e push (se configurado)
+        # Git commit e push (se possível)
         try:
             subprocess.run(["git", "add", arquivo_escolhido, log_file])
             subprocess.run(["git", "commit", "-m", f"Alteração por {nome_autor}: {descricao}"])
