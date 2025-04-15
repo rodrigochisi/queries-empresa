@@ -5,7 +5,8 @@ import pandas as pd
 import subprocess
 
 base_dir = "variaveis_command_center/grupo_santa"
-log_file = "log_edicoes.csv"
+log_file = os.path.join(os.path.dirname(__file__), "log_edicoes.csv")
+
 
 st.title("📝 Editor de Scripts SQL - Grupo Santa")
 
@@ -34,6 +35,11 @@ nome_autor = st.text_input("Seu nome:")
 descricao = st.text_input("Descrição da alteração:")
 
 if st.button("💾 Salvar e registrar alteração"):
+    st.write("🔍 Debug: Iniciando salvamento")
+    st.write("Arquivo:", arquivo_escolhido)   
+    st.write("Autor:", nome_autor)
+    st.write("Descrição:", descricao)
+
     if not nome_autor or not descricao:
         st.error("Por favor, preencha seu nome e a descrição da alteração.")
     else:
