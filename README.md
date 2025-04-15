@@ -7,7 +7,7 @@ Este repositório centraliza todas as queries SQL versionadas da equipe de BI.
 - `mv/`: Views relacionadas ao sistema MV
 - `quicksight/`: Consultas utilizadas em relatórios Quicksight
 - `templates/`: Modelos de arquivos SQL com cabeçalho padronizado
-- `arquivos_auxiliares/`: Documentos de apoio (ex: dicionário de dados)
+- `variaveis_command_center/`: views utilizadas no App-  Command Center 
 
 ## 🧩 Boas práticas
 
