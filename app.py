@@ -5,8 +5,7 @@ import pandas as pd
 import subprocess
 
 base_dir = "variaveis_command_center/grupo_santa"
-log_file = os.path.join(os.path.dirname(__file__), "log_edicoes.csv")
-
+log_file = "variaveis_command_center/log_edicoes.csv"
 
 st.title("📝 Editor de Scripts SQL - Grupo Santa")
 
@@ -52,6 +51,8 @@ if st.button("💾 Salvar e registrar alteração"):
             "descricao": descricao,
             "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
         if os.path.exists(log_file):
             df = pd.read_csv(log_file)
