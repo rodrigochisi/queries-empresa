@@ -16,8 +16,11 @@ def listar_arquivos_sql(pasta_base):
             if file.endswith(".sql"):
                 arquivos.append(os.path.join(root, file))
     return arquivos
-
+1
 arquivos_sql = listar_arquivos_sql(base_dir)
+st.write("🔍 Arquivos encontrados:", arquivos_sql)
+st.write("📂 Caminho absoluto atual:", os.getcwd())
+
 
 if not arquivos_sql:
     st.warning("Nenhum arquivo SQL encontrado.")
