@@ -19,8 +19,6 @@ def listar_arquivos_sql(pasta_base):
 
 arquivos_sql = listar_arquivos_sql(base_dir)
 
-
-
 if not arquivos_sql:
     st.warning("Nenhum arquivo SQL encontrado.")
     st.stop()
@@ -33,28 +31,30 @@ with open(arquivo_escolhido, "r", encoding="utf-8") as f:
 novo_conteudo = st.text_area("Edite o conteúdo abaixo:", value=conteudo, height=400)
 
 nome_autor = st.text_input("Seu nome:")
-descricao = st.text_input("Descrição da alteração:")
+descricao = st.text_input("Propósito da alteração:")
 
 if st.button("💾 Salvar e registrar alteração"):
     st.write("🔍 Debug: Iniciando salvamento")
-    st.write("Arquivo:", arquivo_escolhido)
+    st.write("Arquivo:", arquivo_escolhido)   
     st.write("Autor:", nome_autor)
     st.write("Descrição:", descricao)
 
     if not nome_autor or not descricao:
-        st.error("Por favor, preencha seu nome e a descrição da alteração.")
+        st.error("Por favor, preencha seu nome e o propósito da alteração.")
     else:
         with open(arquivo_escolhido, "w", encoding="utf-8") as f:
             f.write(novo_conteudo)
 
-        novo_log = {
-            "arquivo": arquivo_escolhido,
-            "autor": nome_autor,
-            "descricao": descricao,
-            "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
+        # Gera log formatado
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        nome_variavel = arquivo_escolhido.replace("variaveis_command_center/grupo_santa/", "")
+
+        novo_log = {
+            "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "variavel": nome_variavel,
+            "autor": nome_autor,
+            "proposito": descricao
+        }
 
         if os.path.exists(log_file):
             df = pd.read_csv(log_file)
