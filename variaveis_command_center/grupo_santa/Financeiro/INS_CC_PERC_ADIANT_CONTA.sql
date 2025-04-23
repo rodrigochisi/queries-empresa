@@ -1,59 +1,77 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2821
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f0\fs24 \cf0 -- ======================================================================================\
--- VIEW: INS_CC_PERC_ADIANT_CONTA\
--- PROP\'d3SITO: Monitora o valor da conta e compara com o adiantamento. Dispara alerta quando o valor da conta tinge 90% do adiantamento\
--- CRIADO POR:  Rodrigo / Gustavo\
--- DATA DE CRIA\'c7\'c3O: 15/04/2025\
--- \'daLTIMA ALTERA\'c7\'c3O: 15/04/2025  por Fulano - [JIRA-123] Ajuste em filtros de data\
--- ======================================================================================\
-\
-\
- CREATE OR REPLACE FORCE EDITIONABLE VIEW "INVISUAL"."INS_CC_PERC_ADIANT_CONTA"  AS\
-\
-select\
-  atend.cd_multi_empresa as CODIGOMULTIEMPRESA\
-  ,atend.cd_atendimento as CODIGOATENDIMENTO\
-  ,to_char(atend.dt_atendimento,  'YYYY-MM-DD HH24:MI:SS') as DATAHORAINICIO\
-  ,atend.cd_paciente as CODIGOPACIENTE\
-  ,pac.nm_paciente as NOMEPACIENTE\
-  ,listagg(rf.cd_reg_fat, ', ') within group(order by rf.cd_reg_fat) as CODIGOCONTA\
-  ,round(nvl(sum(rf.vl_total_conta), 0) / nullif((nvl(caucao.vl_caucao, 0) + nvl(cont.vl_contrato_adiant, 0)), 0), 2)*100 as VALOR\
-from dbamv.atendime atend\
-left join dbamv.convenio conv on atend.cd_convenio = conv.cd_convenio\
-left join dbamv.paciente pac on atend.cd_paciente = pac.cd_paciente\
-left join dbamv.reg_fat rf on atend.cd_atendimento = rf.cd_atendimento\
-left join (\
-  select cd_atendimento, sum(vl_caucao) as vl_caucao\
-  from dbamv.caucao\
-  group by cd_atendimento\
-) caucao on atend.cd_atendimento = caucao.cd_atendimento\
-left join (\
-  select cd_atendimento, sum(vl_contrato_adiant) as vl_contrato_adiant\
-  from dbamv.contrato_adiantamento\
-  where sn_recebido = 'S'\
-  group by cd_atendimento\
-) cont on atend.cd_atendimento = cont.cd_atendimento\
-where 1=1\
-and atend.tp_atendimento = 'I'\
-and conv.tp_convenio = 'P'\
-and atend.dt_atendimento >= to_date('01/01/' || to_char(sysdate, 'yyyy'), 'dd/mm/yyyy')\
-and atend.dt_alta is null\
-group by\
-  atend.cd_multi_empresa\
-  ,atend.cd_atendimento\
-  ,to_char(atend.dt_atendimento,  'YYYY-MM-DD HH24:MI:SS')\
-  ,atend.cd_paciente\
-  ,pac.nm_paciente\
-  ,caucao.vl_caucao\
-  ,cont.vl_contrato_adiant\
-having\
-  nvl(caucao.vl_caucao, 0) + nvl(cont.vl_contrato_adiant, 0) > 0\
-  and nvl(sum(rf.vl_total_conta), 0) >= (nvl(caucao.vl_caucao, 0) + nvl(cont.vl_contrato_adiant, 0)) * 0.9 --conta atingiu 90%+ do valor adiantado\
-order by\
-  atend.cd_atendimento}
+BEGIN
+-- Verifica e remove a view se já existir
+   EXECUTE IMMEDIATE 'DROP VIEW INVISUAL.INS_CC_PERC_ADIANT_CONTA';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -942 THEN
+         RAISE;
+      END IF;
+END;
+/
+
+
+-- ======================================================================================
+-- NOME DA VIEW: INS_CC_PERC_ADIANT_CONTA
+-- VARIÁVEL COMMAND CENTER : Financeiro - Paciente Particular - Percentagem do Adiantamento da Conta
+-- PROPÓSITO: Monitora o valor da conta e compara com o adiantamento. 
+--            Dispara alerta quando o valor da conta atinge 90% do adiantamento.
+-- CRIADO POR: Rodrigo / Gustavo
+-- DATA DE CRIAÇÃO: 10/04/2025
+-- ÚLTIMA ALTERAÇÃO: 15/04/2025 por Rodrigo - [JIRA-CC- 243] Alterei o filtro de 70% para 80% 
+-- ======================================================================================
+
+
+
+-- Criação da view
+CREATE OR REPLACE FORCE EDITIONABLE VIEW INVISUAL.INS_CC_PERC_ADIANT_CONTA AS
+SELECT
+    ATEND.CD_MULTI_EMPRESA AS CODIGOMULTIEMPRESA,
+    ATEND.CD_ATENDIMENTO AS CODIGOATENDIMENTO,
+    TO_CHAR(ATEND.DT_ATENDIMENTO, 'YYYY-MM-DD HH24:MI:SS') AS DATAHORAINICIO,
+    ATEND.CD_PACIENTE AS CODIGOPACIENTE,
+    PAC.NM_PACIENTE AS NOMEPACIENTE,
+    LISTAGG(RF.CD_REG_FAT, ', ') WITHIN GROUP (ORDER BY RF.CD_REG_FAT) AS CODIGOCONTA,
+    ROUND(
+        NVL(SUM(RF.VL_TOTAL_CONTA), 0) / 
+        NULLIF((NVL(CAUCAO.VL_CAUCAO, 0) + NVL(CONT.VL_CONTRATO_ADIANT, 0)), 0),
+        2
+    ) * 100 AS VALOR
+FROM DBAMV.ATENDIME ATEND
+LEFT JOIN DBAMV.CONVENIO CONV 
+    ON ATEND.CD_CONVENIO = CONV.CD_CONVENIO
+LEFT JOIN DBAMV.PACIENTE PAC 
+    ON ATEND.CD_PACIENTE = PAC.CD_PACIENTE
+LEFT JOIN DBAMV.REG_FAT RF 
+    ON ATEND.CD_ATENDIMENTO = RF.CD_ATENDIMENTO
+LEFT JOIN (
+    SELECT CD_ATENDIMENTO, SUM(VL_CAUCAO) AS VL_CAUCAO
+    FROM DBAMV.CAUCAO
+    GROUP BY CD_ATENDIMENTO
+) CAUCAO 
+    ON ATEND.CD_ATENDIMENTO = CAUCAO.CD_ATENDIMENTO
+LEFT JOIN (
+    SELECT CD_ATENDIMENTO, SUM(VL_CONTRATO_ADIANT) AS VL_CONTRATO_ADIANT
+    FROM DBAMV.CONTRATO_ADIANTAMENTO
+    WHERE SN_RECEBIDO = 'S'
+    GROUP BY CD_ATENDIMENTO
+) CONT 
+    ON ATEND.CD_ATENDIMENTO = CONT.CD_ATENDIMENTO
+WHERE ATEND.TP_ATENDIMENTO = 'I'
+  AND CONV.TP_CONVENIO = 'P'
+  AND ATEND.DT_ATENDIMENTO >= TO_DATE('01/01/' || TO_CHAR(SYSDATE, 'YYYY'), 'DD/MM/YYYY')
+  AND ATEND.DT_ALTA IS NULL
+GROUP BY
+    ATEND.CD_MULTI_EMPRESA,
+    ATEND.CD_ATENDIMENTO,
+    TO_CHAR(ATEND.DT_ATENDIMENTO, 'YYYY-MM-DD HH24:MI:SS'),
+    ATEND.CD_PACIENTE,
+    PAC.NM_PACIENTE,
+    CAUCAO.VL_CAUCAO,
+    CONT.VL_CONTRATO_ADIANT
+HAVING
+    NVL(CAUCAO.VL_CAUCAO, 0) + NVL(CONT.VL_CONTRATO_ADIANT, 0) > 0
+    AND NVL(SUM(RF.VL_TOTAL_CONTA), 0) >= 
+        (NVL(CAUCAO.VL_CAUCAO, 0) + NVL(CONT.VL_CONTRATO_ADIANT, 0)) * 0.9 -- 90% ou mais do valor adiantado
+ORDER BY
+    ATEND.CD_ATENDIMENTO;
