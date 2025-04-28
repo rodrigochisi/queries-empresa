@@ -1,0 +1,53 @@
+
+
+BEGIN
+-- Verifica e remove a view se já existir
+   EXECUTE IMMEDIATE 'DROP VIEW  INVISUAL.INS_CC_TEMPO_HIGIENE_LEITO_INT';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -942 THEN
+         RAISE;
+      END IF;
+END;
+/
+
+
+-- ======================================================================================
+-- NOME DA DA VIEW: INS_CC_TEMPO_HIGIENE_LEITO_INT
+-- VARIÁVEL COMMAND CENTER: Tempo de Higienização de Leito
+-- PROPÓSITO: Monitora o tempo de higienizacao de leito.
+-- CRIADO POR: Rubens
+-- DATA DE CRIAÇÃO: **
+-- ÚLTIMA ALTERAÇÃO: 28/04/2025 - Padronização de cabeçalho das views do IGESP
+-- ======================================================================================
+
+
+ CREATE OR REPLACE FORCE EDITIONABLE VIEW "INVISUAL"."INS_CC_TEMPO_HIGIENE_LEITO_INT"  AS select
+setor.CD_MULTI_EMPRESA CODIGOMULTIEMPRESA,
+TO_CHAR(LIMPEZA.HR_SOLIC_LIMPEZA, 'YYYY-MM-DD HH24:MI:SS') AS DATAHORAINICIO,
+unid.CD_SETOR as CODIGOSETOR ,
+setor.NM_SETOR as DESCRICAOSETOR ,
+case when leito.CD_TIP_ACOM IN (3,47) then  'UTI'   -- UTI
+     WHEN leito.CD_TIP_ACOM = 1  THEN 'UI - Apartamento'  -- UI
+     WHEN leito.CD_TIP_ACOM = 2  THEN 'UI - Enfermaria'
+                  END TIPOACOMODACAO ,
+leito.CD_UNID_INT as CODIGOUNIDADEINTERNACAO ,
+unid.DS_UNID_INT as DESCRICAOUNIDADEINTERNACAO ,
+leito.CD_LEITO as CODIGOLEITO ,
+leito.DS_LEITO as DESCRICAOLEITO,
+leito.cd_tip_acom,
+LIMPEZA.CD_SOLIC_LIMPEZA as CODIGOITEM,
+LIMPEZA.NM_USUARIO AS NOMESOLICITANTE,
+ROUND((SYSDATE - LIMPEZA.HR_SOLIC_LIMPEZA) * 1440) AS VALOR
+from DBAMV.LEITO LEITO
+LEFT JOIN DBAMV.UNID_INT UNID ON UNID.CD_UNID_INT=LEITO.CD_UNID_INT
+LEFT JOIN DBAMV.SETOR SETOR ON SETOR.CD_SETOR=UNID.CD_SETOR
+LEFT JOIN DBAMV.SOLIC_LIMPEZA LIMPEZA ON LIMPEZA.CD_LEITO=LEITO.CD_LEITO and LIMPEZA.SN_REALIZADO='N' and LIMPEZA.TP_SITUACAO<>'C'
+where LEITO.TP_SITUACAO='A'
+and CD_TIP_ACOM IN (1,2,3,47)
+and setor.CD_MULTI_EMPRESA IN (1,7,9)
+and LEITO.TP_OCUPACAO='L'
+and LEITO.SN_EXTRA='N'
+and DT_HR_FIM_HIGIENIZA is null
+and limpeza.hr_solic_limpeza is not null
+order by DATAHORAINICIO;
