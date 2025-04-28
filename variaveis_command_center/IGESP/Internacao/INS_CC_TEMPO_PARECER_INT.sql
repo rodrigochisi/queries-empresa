@@ -1,0 +1,61 @@
+BEGIN
+-- Verifica e remove a view se já existir
+   EXECUTE IMMEDIATE 'DROP VIEW INVISUAL.INS_CC_TEMPO_PARECER_INT';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -942 THEN
+         RAISE;
+      END IF;
+END;
+/
+
+
+
+-- ======================================================================================
+-- VIEW: INS_CC_TEMPO_PARECER_INT
+-- VARIÁVEL COMMAND CENTER : Ainda nao criada
+-- PROPÓSITO: Monitora o tempo de laudo de pareceres medicos na internacao
+-- CRIADO POR:  Rubens
+-- DATA DE CRIAÇÃO: **
+-- ÚLTIMA ALTERAÇÃO: 28/04/2025 - Padronização de cabeçalho das views do IGESP
+-- ======================================================================================
+
+ CREATE OR REPLACE FORCE EDITIONABLE VIEW "INVISUAL"."INS_CC_TEMPO_PARECER_INT"  AS
+ 
+ select
+atend.CD_MULTI_EMPRESA CODIGOMULTIEMPRESA,
+atend.CD_PACIENTE as CODIGOPACIENTE,
+par.CD_ATENDIMENTO as CODIGOATENDIMENTO,
+TO_CHAR(par.DT_SOLICITACAO,'YYYY-MM-DD HH24:MI:SS') as DATAHORAINICIO,
+conv.NM_CONVENIO as DESCRICAOCONVENIO,
+dbamv.obter_iniciais_com_ponto(pac.NM_PACIENTE) as NOMEPACIENTE,
+espatend.DS_ESPECIALID as DESCRICAOESPECIALIDADE,
+unid.CD_SETOR as CODIGOSETOR ,
+setor.NM_SETOR as DESCRICAOSETOR ,
+leito.CD_UNID_INT as CODIGOUNIDADEINTERNACAO ,
+unid.DS_UNID_INT as DESCRICAOUNIDADEINTERNACAO ,
+leito.CD_LEITO as CODIGOLEITO ,
+leito.DS_LEITO as DESCRICAOLEITO,
+PAR.CD_PAR_MED AS CODIGOITEM,
+prestsolic.NM_PRESTADOR as NOMESOLICITANTE,
+case when prest.NM_PRESTADOR is null then esp.DS_ESPECIALID else esp.DS_ESPECIALID||' - '||prest.NM_PRESTADOR end AS DESCRICAOITEM,
+ROUND((SYSDATE - par.DT_SOLICITACAO) * 1440) as VALOR
+from DBAMV.PAR_MED PAR
+left join DBAMV.ATENDIME ATEND on atend.CD_ATENDIMENTO=par.CD_ATENDIMENTO
+left join DBAMV.PACIENTE PAC on pac.CD_PACIENTE=atend.CD_PACIENTE
+left join DBAMV.LEITO LEITO on leito.CD_LEITO=atend.CD_LEITO
+LEFT JOIN DBAMV.UNID_INT UNID ON UNID.CD_UNID_INT=LEITO.CD_UNID_INT
+LEFT JOIN DBAMV.SETOR SETOR ON SETOR.CD_SETOR=UNID.CD_SETOR
+left join DBAMV.ESPECIALID esp on esp.CD_ESPECIALID=par.CD_ESPECIALID
+left join dbamv.especialid espatend on espatend.CD_ESPECIALID=atend.CD_ESPECIALID
+left join DBAMV.CONVENIO conv on conv.CD_CONVENIO=atend.CD_CONVENIO
+left join DBAMV.PRESTADOR prest on par.CD_PRESTADOR_REQUISITADO=prest.CD_PRESTADOR
+left join DBAMV.PRESTADOR prestsolic on par.CD_PRESTADOR=prestsolic.CD_PRESTADOR
+where
+PAR.DT_CANCELAMENTO is null
+and PAR.DT_PARECER is null
+and ATEND.DT_ALTA is null
+and ATEND.TP_ATENDIMENTO='I'
+and PAR.DT_SOLICITACAO>=(sysdate - interval '7' day)
+and atend.CD_MULTI_EMPRESA IN (1,7,9)
+order by DATAHORAINICIO;
