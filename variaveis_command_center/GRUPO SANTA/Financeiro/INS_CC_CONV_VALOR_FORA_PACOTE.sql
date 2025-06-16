@@ -19,12 +19,11 @@ END;
 -- PROPÓSITO: Monitora pacientes convênio com item fora do pacote
 -- CRIADO POR:  Rodrigo  / Gustavo
 -- DATA DE CRIAÇÃO: 10/04/2025
--- ÚLTIMA ALTERAÇÃO: 15/04/2025 por Gustavo - [JIRA-CC-244] Desconsiderar itens N/A
+-- ÚLTIMA ALTERAÇÃO: 07/05/2025 - Ajuste no filtro da tabela de  Proibiçao
 -- ======================================================================================
 
 
 CREATE OR REPLACE FORCE EDITIONABLE VIEW "INVISUAL"."INS_CC_CONV_VALOR_FORA_PACOTE" AS
-
 SELECT 
     A.CD_MULTI_EMPRESA AS CODIGOMULTIEMPRESA,
     C2.NM_CONVENIO AS DESCRICAOCONVENIO,
@@ -37,6 +36,10 @@ SELECT
     IRA.CD_PRO_FAT AS CODIGOITEM,
     PF.DS_PRO_FAT AS DESCRICAOITEM,
     ROUND(IRA.VL_TOTAL_CONTA) AS VALOR
+    
+    
+    
+    
 FROM 
     DBAMV.REG_AMB RA
     LEFT JOIN DBAMV.ITREG_AMB IRA ON RA.CD_REG_AMB = IRA.CD_REG_AMB
@@ -51,7 +54,7 @@ FROM
         AND PROB.CD_CON_PLA = CP.CD_CON_PLA
         AND PROB.CD_CONVENIO = CP.CD_CONVENIO
         AND A.CD_MULTI_EMPRESA = PROB.CD_MULTI_EMPRESA
-        AND A.TP_ATENDIMENTO = PROB.TP_ATENDIMENTO
+      --   AND A.TP_ATENDIMENTO = PROB.TP_ATENDIMENTO Comparacao feita no Where , consideranto o tipo de atneimento T = Todos
 WHERE 
     IRA.HR_LANCAMENTO >= SYSDATE - INTERVAL '24' HOUR
     AND A.TP_ATENDIMENTO = 'U'
@@ -61,8 +64,18 @@ WHERE
     AND NVL(IRA.TP_PAGAMENTO, 'P') <> 'C'
     AND NVL(RA.SN_DIAGNO, 'N') = 'N'
     AND IRA.VL_TOTAL_CONTA > 0
-    AND (PROB.TP_PROIBICAO IS NULL OR PROB.TP_PROIBICAO <> 'NA')
-    AND PROB.DT_FIM_PROIBICAO IS NULL
+    
+      AND PROB.DT_INICIAL_PROIBICAO <= A.DT_ATENDIMENTO
+    
+       AND (   A.TP_ATENDIMENTO = PROB.TP_ATENDIMENTO
+              OR PROB.TP_ATENDIMENTO = 'T')
+              
+              
+   AND (   PROB.DT_FIM_PROIBICAO >= IRA.HR_LANCAMENTO
+              OR PROB.DT_FIM_PROIBICAO IS NULL)           
+     AND PROB.TP_PROIBICAO = 'NA'
+    
+    
     AND ROUND(
         (
             IRA.VL_TOTAL_CONTA / 
@@ -83,6 +96,11 @@ WHERE
               AND CR.CD_REG_AMB = RA.CD_REG_AMB
         ),
     2) IS NULL
+    
+    
+    
+    
+    
 
 UNION ALL
 
@@ -112,7 +130,7 @@ FROM
         AND PROB.CD_CON_PLA = CP.CD_CON_PLA
         AND PROB.CD_CONVENIO = CP.CD_CONVENIO
         AND A.CD_MULTI_EMPRESA = PROB.CD_MULTI_EMPRESA
-        AND A.TP_ATENDIMENTO = PROB.TP_ATENDIMENTO
+       --  AND A.TP_ATENDIMENTO = PROB.TP_ATENDIMENTO Comparacao feita no Where , consideranto o tipo de atneimento T = Todos
 WHERE 
     IFA.HR_LANCAMENTO >= SYSDATE - INTERVAL '24' HOUR
     AND A.TP_ATENDIMENTO = 'I'
@@ -123,8 +141,14 @@ WHERE
     AND NVL(IFA.TP_PAGAMENTO, 'P') <> 'C'
     AND NVL(RF.SN_DIAGNO, 'N') = 'N'
     AND IFA.VL_TOTAL_CONTA > 0
-    AND (PROB.TP_PROIBICAO IS NULL OR PROB.TP_PROIBICAO <> 'NA')
-    AND PROB.DT_FIM_PROIBICAO IS NULL
+    
+    AND PROB.DT_INICIAL_PROIBICAO <= A.DT_ATENDIMENTO 
+    AND (A.TP_ATENDIMENTO = PROB.TP_ATENDIMENTO
+              OR PROB.TP_ATENDIMENTO = 'T')
+    AND (PROB.DT_FIM_PROIBICAO >= IFA.HR_LANCAMENTO
+              OR PROB.DT_FIM_PROIBICAO IS NULL)           
+     AND PROB.TP_PROIBICAO = 'NA'
+     
     AND (
         (
             IFA.VL_TOTAL_CONTA / 
@@ -145,3 +169,4 @@ WHERE
               AND CR.CD_REG_FAT = RF.CD_REG_FAT
         )
     ) IS NULL;
+
